@@ -1,41 +1,59 @@
-import { Teams, Players, Timers, GameMode, Ui, Properties, Map } from 'pixel_combats/room';
+// Настройки игрового режима
+const GAME_TIME_SECONDS = 120; // Длительность раунда (2 минуты)
+const SCORE_TO_WIN = 100;      // Очки для победы
+const COOLDOWN_MS = 3000;      // Задержка перед следующим спавном в миллисекундах
 
-var mainTeam = Teams.Get("Blue");
-var enemyTeam = Teams.Get("Red");
+let isGameActive = false;
+let scores = {};
+let gameTimer;
 
-mainTeam.Spawns.SpawnsConfig.Value = 1;
-enemyTeam.Spawns.SpawnsConfig.Value = 1;
+// Инициализация мода при старте
+function initGameMode() {
+    isGameActive = true;
+    scores = { teamA: 0, teamB: 0 };
+    
+    // Запуск таймера раунда
+    gameTimer = setInterval(() => {
+        // Логика проверки таймера в игре
+    }, 1000);
 
-mainTeam.Properties.Get("Deaths").Value = 0;
-enemyTeam.Properties.Get("Deaths").Value = 0;
+    // Вызываем функцию появления объектов
+    spawnLoot();
+}
 
-var matchTimer = Timers.GetContext().Get("MatchTimer");
-matchTimer.OnTimer.Add(function() {
-    GameMode.ExitToLobby();
-});
+// Логика спавна предметов (сокровищ)
+function spawnLoot() {
+    if (!isGameActive) return;
 
-Players.OnPlayerConnect.Add(function(player) {
-    if (mainTeam.Count <= enemyTeam.Count) {
-        mainTeam.Add(player);
-    } else {
-        enemyTeam.Add(player);
+    // Генерация координат в пределах карты
+    const coordinateX = Math.floor(Math.random() * 500) - 250;
+    const coordinateY = 20; 
+    const coordinateZ = Math.floor(Math.random() * 500) - 250;
+
+    // Вставка объекта через API игры (пример концепта)
+    console.log(`Спавн сокровища на координатах: X: ${coordinateX}, Y: ${coordinateY}, Z: ${coordinateZ}`);
+    
+    setTimeout(spawnLoot, COOLDOWN_MS);
+}
+
+// Подсчет очков команд
+function addPoints(team, amount) {
+    if (!isGameActive) return;
+    
+    scores[team] += amount;
+    console.log(`Команда ${team} получила очки: ${scores[team]}`);
+
+    if (scores[team] >= SCORE_TO_WIN) {
+        declareWinner(team);
     }
-});
+}
 
-Players.OnPlayerSpawn.Add(function(player) {
-    player.Properties.Get("Scores").Value = 0;
-});
+// Завершение игры
+function declareWinner(winningTeam) {
+    isGameActive = false;
+    clearInterval(gameTimer);
+    console.log(`Игра окончена! Победитель: ${winningTeam}`);
+}
 
-Players.OnDeath.Add(function(player, killedBy) {
-    if (player.Team != null) {
-        player.Team.Properties.Get("Deaths").Value++;
-    }
-    if (killedBy != null && killedBy.Team != null && killedBy.Team != player.Team) {
-        killedBy.Properties.Get("Scores").Value += 10;
-    }
-    player.Spawns.Spawn();
-});
-
-GameMode.OnStart.Add(function() {
-    matchTimer.Restart(300);
-});
+// Вызываем функцию при запуске режима
+initGameMode();
