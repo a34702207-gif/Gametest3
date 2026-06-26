@@ -1,59 +1,47 @@
-// Настройки игрового режима
-const GAME_TIME_SECONDS = 120; // Длительность раунда (2 минуты)
-const SCORE_TO_WIN = 100;      // Очки для победы
-const COOLDOWN_MS = 3000;      // Задержка перед следующим спавном в миллисекундах
+try {
+    // 1. НАСТРОЙКА КОМАНД И ИГРЫ
+    // Создаем стандартные команды для захода игроков
+    Teams.Add("Blue", "СИНИЕ", new Color(0, 0, 1, 1));
+    Teams.Add("Red", "КРАСНЫЕ", new Color(1, 0, 0, 1));
 
-let isGameActive = false;
-let scores = {};
-let gameTimer;
+    // Получаем созданные команды в переменные для настройки свойств
+    var blueTeam = Teams.Get("Blue");
+    var redTeam = Teams.Get("Red");
 
-// Инициализация мода при старте
-function initGameMode() {
-    isGameActive = true;
-    scores = { teamA: 0, teamB: 0 };
-    
-    // Запуск таймера раунда
-    gameTimer = setInterval(() => {
-        // Логика проверки таймера в игре
-    }, 1000);
+    // Привязываем точки спавна из редактора карты к командам
+    blueTeam.Spawns.Add(Spawns.GetContext().Get("BlueSpawn"));
+    redTeam.Spawns.Add(Spawns.GetContext().Get("RedSpawn"));
 
-    // Вызываем функцию появления объектов
-    spawnLoot();
+    // Разрешаем игрокам одной команды наносить урон другой
+    var damage = Damage.GetContext();
+    damage.FriendlyFire = false; // Огонь по своим отключен
+
+    // 2. ИГРОВЫЕ СОБЫТИЯ (ОБРАБОТЧИКИ)
+    // Событие входа игрока на сервер
+    Players.OnPlayerConnect.Add(function(player) {
+        // Логика при подключении (например, выдача приветственных очков)
+    });
+
+    // Событие выбора команды игроком
+    Players.OnQueue.Add(function(player) {
+        // Автоматически отправляем игрока в синюю команду для теста
+        blueTeam.Add(player); 
+    });
+
+    // Событие спавна (возрождения) игрока
+    Spawns.OnSpawn.Add(function(player) {
+        // Выдаем базовое оружие и инструмент для строительства
+        player.Inventory.Main.Value = false;
+        player.Inventory.Secondary.Value = false;
+        player.Inventory.Melee.Value = true; // Разрешаем нож
+    });
+
+    // Событие смерти игрока
+    Players.OnDeath.Add(function(player, killedBy) {
+        // Логика начисления очков за убийство
+    });
+
+} catch (error) {
+    // Обязательный блок от разработчиков для отлова багов в логах сервера
+    Log.Error("Произошла ошибка в режиме: " + error.message);
 }
-
-// Логика спавна предметов (сокровищ)
-function spawnLoot() {
-    if (!isGameActive) return;
-
-    // Генерация координат в пределах карты
-    const coordinateX = Math.floor(Math.random() * 500) - 250;
-    const coordinateY = 20; 
-    const coordinateZ = Math.floor(Math.random() * 500) - 250;
-
-    // Вставка объекта через API игры (пример концепта)
-    console.log(`Спавн сокровища на координатах: X: ${coordinateX}, Y: ${coordinateY}, Z: ${coordinateZ}`);
-    
-    setTimeout(spawnLoot, COOLDOWN_MS);
-}
-
-// Подсчет очков команд
-function addPoints(team, amount) {
-    if (!isGameActive) return;
-    
-    scores[team] += amount;
-    console.log(`Команда ${team} получила очки: ${scores[team]}`);
-
-    if (scores[team] >= SCORE_TO_WIN) {
-        declareWinner(team);
-    }
-}
-
-// Завершение игры
-function declareWinner(winningTeam) {
-    isGameActive = false;
-    clearInterval(gameTimer);
-    console.log(`Игра окончена! Победитель: ${winningTeam}`);
-}
-
-// Вызываем функцию при запуске режима
-initGameMode();
